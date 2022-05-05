@@ -6,63 +6,62 @@ import time
 import cv2
 import time
 cam = cv2.VideoCapture(1)
+
+# Auflösung runterskalieren:
 # cam.set(3, 640)
 # cam.set(4, 480)
+images = []  # list of images
 
 #-----------------------------------------------------------------------------------------
-# jede s 1 Bild machen
+# jede s 1 Bild machen:
 
 # Initialise variables to store current time difference as well as previous time call value
-previous = time.time()
-delta = 0
+# previous = time.time()
+# delta = 0
 
-images = []  # list of images
-counter = 0
-timediff_in_sec = 1
-# Keep looping
-while True:
-    # Get the current time, increase delta and update the previous variable
-    current = time.time()
-    delta += current - previous
-    previous = current
+# counter = 0
+# timediff_in_sec = 1
+# # Keep looping
+# while True:
+#     # Get the current time, increase delta and update the previous variable
+#     current = time.time()
+#     delta += current - previous
+#     previous = current
 
-    if delta > timediff_in_sec:
-        # Operations on image
-        cv2.imshow("Frame", img)
-        cv2.waitKey(1)
+#     if delta > timediff_in_sec:
+#         # Operations on image
+#         cv2.imshow("Frame", img)
+#         cv2.waitKey(1)
         
-        images.append(img)
-        # images[counter % num_of_images] = img
-        counter = counter + 1
-        # Reset the time counter
-        delta = 0
+#         images.append(img)
+#         # images[counter % num_of_images] = img
+#         counter = counter + 1
+#         # Reset the time counter
+#         delta = 0
         
-    if counter >= 10:
-        del images[0] # delete first element of imagelist
-        break 
+#     if counter >= 10:
+#         del images[0] # delete first element of imagelist
+#         break 
         
     
-    _, img = cam.read()  # Show the image and keep streaming
+#     _, img = cam.read()  # Show the image and keep streaming
     
 #---------------------------------------------------------------------------------
+import keyboard
 
-# darts = []
-
-# while True:
-#     if cv2.waitKey(1) & 0xFF == ord('b'):
-#         # background = cam.read()
-#         # cv2.imshow("Frame", background)
-#         print("b")
-#     if cv2.waitKey(1) & 0xFF == ord('d'):
-#         darts.append(cam.read())  
-#         cv2.imshow("Frame", darts)
-        
-#     if cv2.waitKey(1) & 0xFF == ord('e'):    
-#         break
+while True:
+    if keyboard.read_key() == "b":
+        background = cam.read()
+        cv2.imshow("Frame", background)
+        print("background")    
+    if keyboard.read_key() == "d":
+        dart = cam.read()
+        cv2.imshow("Frame", dart)
+        print("dart")
+    if keyboard.read_key() == "e":
+        print("exit")  
+        break
     
-
-# print("test")
-
 
 cam.release()
 cv2.destroyAllWindows()
