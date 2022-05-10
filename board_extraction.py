@@ -29,7 +29,7 @@ import matplotlib.pyplot as plt
 # %matplotlib qt
 
 # Load the image
-img = cv2.imread('D:/downloads/geometric.jpg') 
+img = cv2.imread(path) 
 
 # Create a copy of the image
 img_copy = np.copy(img)
@@ -40,19 +40,30 @@ img_copy = np.copy(img)
 # transformation matrix
 img_copy = cv2.cvtColor(img_copy,cv2.COLOR_BGR2RGB)
 
-plt.imshow(img_copy)
+def onMouse(event, x, y, flags, param):
+    if event == cv2.EVENT_LBUTTONDOWN:
+       # draw circle here (etc...)
+       print('x = %d, y = %d'%(x, y))
+       cv2.destroyAllWindows() 
+
+cv2.imshow("image", img)
+cv2.namedWindow('image')
+cv2.setMouseCallback('image', onMouse)
 
 
-# Specify input and output coordinates that is used
-# to calculate the transformation matrix
-input_pts = np.float32([[80,1286],[3890,1253],[3890,122],[450,115]])
-output_pts = np.float32([[100,100],[100,3900],[2200,3900],[2200,100]])
+cv2.waitKey(0)
+cv2.destroyAllWindows()
 
-# Compute the perspective transform M
-M = cv2.getPerspectiveTransform(input_pts,output_pts)
+# # Specify input and output coordinates that is used
+# # to calculate the transformation matrix
+# input_pts = np.float32([[80,1286],[3890,1253],[3890,122],[450,115]])
+# output_pts = np.float32([[100,100],[100,3900],[2200,3900],[2200,100]])
 
-# Apply the perspective transformation to the image
-out = cv2.warpPerspective(img,M,(img.shape[1], img.shape[0]),flags=cv2.INTER_LINEAR)
+# # Compute the perspective transform M
+# M = cv2.getPerspectiveTransform(input_pts,output_pts)
 
-# Display the transformed image
-plt.imshow(out)
+# # Apply the perspective transformation to the image
+# out = cv2.warpPerspective(img,M,(img.shape[1], img.shape[0]),flags=cv2.INTER_LINEAR)
+
+# # Display the transformed image
+# plt.imshow(out)
