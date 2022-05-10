@@ -40,17 +40,40 @@ img_copy = np.copy(img)
 # transformation matrix
 img_copy = cv2.cvtColor(img_copy,cv2.COLOR_BGR2RGB)
 
+pressed = False
+
+x_pressed = 0
+y_pressed = 0
 def onMouse(event, x, y, flags, param):
     if event == cv2.EVENT_LBUTTONDOWN:
        # draw circle here (etc...)
-       print('x = %d, y = %d'%(x, y))
-       cv2.destroyAllWindows() 
-
+    #    print('x = %d, y = %d'%(x, y))
+       global x_pressed
+       x_pressed = x
+       global y_pressed
+       y_pressed = y 
+    #    global pressed 
+    #    pressed = True
+       global img
+       img = cv2.circle(img, (x_pressed,y_pressed), radius=5, color=(0,0,255), thickness=1)
+       cv2.destroyAllWindows()
+       
+        
+while True:
+    cv2.imshow("image", img)
+    cv2.namedWindow('image')
+    cv2.setMouseCallback('image', onMouse)
+    if(pressed):
+        # break 
+        print('x = %d, y = %d'%(x_pressed, y_pressed))   
+        img = cv2.circle(img, (x_pressed,y_pressed), radius=5, color=(0,0,255), thickness=1)
+        pressed = False
+        cv2.destroyAllWindows()
+        break
+    cv2.waitKey(0)
+    
+    
 cv2.imshow("image", img)
-cv2.namedWindow('image')
-cv2.setMouseCallback('image', onMouse)
-
-
 cv2.waitKey(0)
 cv2.destroyAllWindows()
 
