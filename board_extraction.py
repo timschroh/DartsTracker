@@ -1,6 +1,7 @@
 # import cv2
 
-path = 'C:\\Users\\timis\\OneDrive\\Desktop\\DartsTracker\\board_testpicture.jpg'
+# path = 'C:\\Users\\timis\\OneDrive\\Desktop\\DartsTracker\\TestPictures\\board_testpicture.jpg'
+path = 'TestPictures\\board_testpicture.jpg'
 
 # img = cv2.imread('C:\\Users\\timis\\OneDrive\\Desktop\\DartsTracker\\board_testpicture.jpg', cv2.IMREAD_GRAYSCALE)
 
