@@ -53,10 +53,12 @@ while True:
     if keyboard.read_key() == "b":
         background = cam.read()
         cv2.imshow("Frame", background)
+        cv2.waitKey(1)
         print("background")    
     if keyboard.read_key() == "d":
         dart = cam.read()
         cv2.imshow("Frame", dart)
+        cv2.waitKey(1)
         print("dart")
     if keyboard.read_key() == "e":
         print("exit")  
