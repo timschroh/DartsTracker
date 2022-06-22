@@ -1,24 +1,7 @@
-# import cv2
-
-path = 'C:\\Users\\timis\\OneDrive\\Desktop\\DartsTracker\\TestPictures\\testaufbau_dart1.jpg'
-# path = 'C:\\Users\\timis\\OneDrive\\Desktop\\DartsTracker\\TestPictures\\testaufbau_board.jpg'
-# path = 'TestPictures\\testaufbau_dart1.jpg'
-
-
+import const
 import cv2
 import numpy as np
 import matplotlib.pyplot as plt
-
-# To open matplotlib in interactive mode
-# %matplotlib qt
-
-# Load the image
-img = cv2.imread(path) 
-dimensions = img.shape
-print(dimensions)
-img = cv2.resize(img, (960, 540))
-calib_img = img
-
 
 pressed = False
 
@@ -40,8 +23,7 @@ def onMouse(event, x, y, flags, param):
     #    img = cv2.circle(img, (x_pressed,y_pressed), radius=5, color=(0,0,255), thickness=1)
        cv2.destroyAllWindows()
 
-def click_point_calib(window_name):    
-    global calib_img 
+def click_point_calib(window_name, calib_img):    
     global pressed
     global x_pressed
     global y_pressed 
@@ -58,85 +40,93 @@ def click_point_calib(window_name):
             break
         cv2.waitKey(0)
     
-def calib_20_1():
-    click_point_calib("20_1")
+def calib_20_1(calib_img):
+    click_point_calib("20_1", calib_img)
     return [x_pressed, y_pressed]
     
-def calib_19_3():
-    click_point_calib("19_3")
+def calib_19_3(calib_img):
+    click_point_calib("19_3", calib_img)
     return [x_pressed, y_pressed]
     
-def calib_11_14():
-    click_point_calib("11_14")
+def calib_11_14(calib_img):
+    click_point_calib("11_14", calib_img)
     return [x_pressed, y_pressed]
     
-def calib_6_10():
-    click_point_calib("6_10")
+def calib_6_10(calib_img):
+    click_point_calib("6_10", calib_img)
     return [x_pressed, y_pressed]
 
+def calib(img_board):    
     
-point_20_1 = calib_20_1()
-print('Calib Point 20_1 coordinates: x = %d, y = %d'%(point_20_1[0], point_20_1[1]))    
-    
-point_19_3 = calib_19_3()
-print('Calib Point 19_3 coordinates: x = %d, y = %d'%(point_19_3[0], point_19_3[1]))    
-    
-point_11_14 = calib_11_14()
-print('Calib Point 11_14 coordinates: x = %d, y = %d'%(point_11_14[0], point_11_14[1]))    
-    
-point_6_10 = calib_6_10()
-print('Calib Point 6_10 coordinates: x = %d, y = %d'%(point_6_10[0], point_6_10[1]))    
+    calib_img = img_board
+
+    point_20_1 = calib_20_1(calib_img)
+    print('Calib Point 20_1 coordinates: x = %d, y = %d'%(point_20_1[0], point_20_1[1]))    
+        
+    point_19_3 = calib_19_3(calib_img)
+    print('Calib Point 19_3 coordinates: x = %d, y = %d'%(point_19_3[0], point_19_3[1]))    
+        
+    point_11_14 = calib_11_14(calib_img)
+    print('Calib Point 11_14 coordinates: x = %d, y = %d'%(point_11_14[0], point_11_14[1]))    
+        
+    point_6_10 = calib_6_10(calib_img)
+    print('Calib Point 6_10 coordinates: x = %d, y = %d'%(point_6_10[0], point_6_10[1]))    
 
 
 # Specify input and output coordinates that is used
 # to calculate the transformation matrix
 
-crop_size = 500
-cs = 250
+    const.crop_size = 500
+    half = int(const.crop_size /2)
 
-#evtl gehen auch mehr als 4 Punkte?
-input_pts = np.float32([point_20_1,point_6_10,point_19_3,point_11_14])
-output_pts = np.float32([[cs,crop_size],[crop_size,cs],[cs,0],[0,cs]])
+    # set transformations points -> input & output
+    input_pts = np.float32( [point_20_1,    point_6_10,     point_19_3,     point_11_14])
+    output_pts = np.float32([[half, 0],     [const.crop_size, half],   [half, const.crop_size],   [0, half]])
 
-# Compute the perspective transform M
-M = cv2.getPerspectiveTransform(input_pts,output_pts)
+    # Compute the perspective transform M
+    M = cv2.getPerspectiveTransform(input_pts,output_pts) #ToDo: serialisieren
 
-# Apply the perspective transformation to the image
-out = cv2.warpPerspective(img,M,(img.shape[1], img.shape[0]),flags=cv2.INTER_LINEAR)
+    # Apply the perspective transformation to the image
+    out = cv2.warpPerspective(img_board,M,(img_board.shape[1], img_board.shape[0]),flags=cv2.INTER_LINEAR)
 
-radius = crop_size / 2
-cv2.circle(out,(cs,cs), cs, (0,0,255), 2)
-out = out[0:crop_size, 0:crop_size]
+    cv2.circle(out,(half,half), half, (0,0,255), 2)
+    out = out[0:const.crop_size, 0:const.crop_size]
 
-out = cv2.circle(out, (cs,cs), radius=7, color=(255,0,0), thickness=2)
+    out = cv2.circle(out, (half,half), radius=7, color=(255,0,0), thickness=2)
 
+    print("Rotation matrix:")
+    print(M)
 
-
-
-# [[-6.47189911e+00  6.20898423e+00  3.86857625e+03]
-#  [-1.11760605e+00  2.37582334e+01 -2.55604927e+03]
-#  [-2.86502475e-04  3.38309159e-02  1.00000000e+00]]
-
-# converting point with Matrix:
-# T = M* [200;200;1]
-
-print(M)
-
-p = (707,167) # Punkt der Dartspitze
-px = (M[0][0]*p[0] + M[0][1]*p[1] + M[0][2]) / ((M[2][0]*p[0] + M[2][1]*p[1] + M[2][2]))
-py = (M[1][0]*p[0] + M[1][1]*p[1] + M[1][2]) / ((M[2][0]*p[0] + M[2][1]*p[1] + M[2][2]))
-T = (int(px), int(py))
-
-# A = np.array(np.mat('250; 250; 1'))  #[204,197,0])
-# A = np.array([[[250,250]]], dtype = "float32")
-# T = np.matmul(M, A)
-# T = cv2.warpPerspective(A, M)
-# T = M.dot(A)
-print(T)
-out = cv2.circle(out, T, radius=7, color=(0,255,0), thickness=2)
+    # Display the transformed image
+    cv2.imshow("image", out)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    return M 
 
 
-# # Display the transformed image
-cv2.imshow("image", out)
-cv2.waitKey(0)
-cv2.destroyAllWindows()
+def transform_point(p, M, img):
+    
+    out = cv2.warpPerspective(img,M,(img.shape[1], img.shape[0]),flags=cv2.INTER_LINEAR)
+
+    const.crop_size = 500
+    half = int(const.crop_size / 2)
+
+    cv2.circle(out,(half,half), half, (0,0,255), 2)
+    out = out[0:const.crop_size, 0:const.crop_size]
+
+    # Transformation through Matrix-Vector-multiplication
+    px = (M[0][0]*p[0] + M[0][1]*p[1] + M[0][2]) / ((M[2][0]*p[0] + M[2][1]*p[1] + M[2][2]))
+    py = (M[1][0]*p[0] + M[1][1]*p[1] + M[1][2]) / ((M[2][0]*p[0] + M[2][1]*p[1] + M[2][2]))
+    p_transf = (int(px), int(py))
+    print("transformed point:")
+    print(p_transf)
+    
+    #draw transformed point
+    out = cv2.circle(out, p_transf, radius=7, color=(0,255,0), thickness=2)
+    
+    cv2.imshow("image", out)
+    cv2.waitKey(0)
+    cv2.destroyAllWindows()
+    
+    return p_transf
