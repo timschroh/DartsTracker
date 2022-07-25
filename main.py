@@ -5,12 +5,14 @@ from dart_extraction import get_dart_coordinates, get_dart_score
 import cv2
 import numpy as np
 
-# Load the image
-img_board = cv2.imread(const.path_board) 
-img_board = cv2.resize(img_board, (const.length, const.width)) # muss iwo einheitlich passieren
+def img_read_resize(path):
+    img = cv2.imread(path)
+    img = cv2.resize(img, (const.length, const.width))
+    return img
 
-img_dart = cv2.imread(const.path_dart)
-img_dart = cv2.resize(img_dart, (const.length, const.width)) # muss iwo einheitlich passieren
+# Load the images
+img_board = img_read_resize(const.path_board) 
+img_dart = img_read_resize(const.path_dart) 
 
 transformation_matrix = calib(img_board)
 
