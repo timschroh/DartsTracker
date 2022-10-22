@@ -12,7 +12,7 @@ def get_dart_coordinates(im0, im1):
     ret, mask = cv2.threshold(Conv_hsv_Gray, 50, 255,cv2.THRESH_BINARY_INV |cv2.THRESH_OTSU)
     dif01[mask != 255] = [255, 255, 255]
 
-    # ToDo: parameter anpassen, um Pfeil besser zu erkennen
+    # ToDo: parameter bisschen anpassen, um Pfeil besser zu erkennen
     blur = cv2.medianBlur(dif01,5) #blur image to erase thin lines
     gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY) # grayscale
 
@@ -38,9 +38,9 @@ def get_dart_coordinates(im0, im1):
     x_low, y_low = lowest_point.ravel()
     cv2.circle(im1, (x_low, y_low), 4, (0, 0, 255), 2) # circle lowest corner red
 
-    cv2.imshow("shapes", im1)
-    cv2.waitKey(0)
-    cv2.destroyAllWindows()
+    # cv2.imshow("shapes", im1)
+    # cv2.waitKey(0)
+    # cv2.destroyAllWindows()
     
     
     point_of_darttip = (x_low, y_low)
@@ -48,10 +48,13 @@ def get_dart_coordinates(im0, im1):
 
 import math
 import numpy as np
-from math import acos
-from math import sqrt
-from math import pi
 
+from enum import Enum
+class field_types(Enum):
+    MISS = 1
+    SINGLE = 2
+    DOUBLE = 3
+    TRIPLE = 4
 
 def get_dart_score(p):
     
@@ -107,23 +110,93 @@ def get_dart_score(p):
         
     score = dict[field_number]    
     
+    field_type = field_types.MISS
+    
     # get single/double/triple/... through the distance to the bullseye
     if(scaled_dist <= 12.7):
         score = 50
+        field_type = field_types.DOUBLE
     elif(scaled_dist <= 31.8):
         score = 25
+        field_type = field_types.SINGLE
     elif(scaled_dist <= 99):
         score = score
+        field_type = field_types.SINGLE
     elif(scaled_dist <= 107):
         score = score * 3
+        field_type = field_types.TRIPLE
     elif(scaled_dist <= 332):
         score = score    
+        field_type = field_types.SINGLE
     elif(scaled_dist <= 340):
         score = score * 2    
+        field_type = field_types.DOUBLE
     else:
         score = 0
-    print("score:")
+        field_type = field_types.MISS
+    print("score: ")
     print(score)
+    print("field type: ")
+    print(field_type.name)
 
+    return(score)
     
 
+def detect_dart():
+    
+    #Video einlesen, hier müssen nun die verschiedenen USB-Kameras eingelesen werden
+    # ToDo: Kamera überprüfen
+    cap = cv2.VideoCapture(0)
+
+    # evaluate frame by frame
+    ret, frame1 = cap.read()
+    ret, frame2 = cap.read()
+    motion = 0 # variable to ensure that a motion is detected
+    frame_counter = 0 # variable to ensure that the dart is stuck in the board
+
+    while cap.isOpened():
+
+        # change the original frame into a threshold frame
+        diff = cv2.absdiff(frame1, frame2)
+        gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (5,5), 0)
+        _, thresh = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
+        # morphological closing (removes small holes from the foreground)
+        dilated = cv2.dilate(thresh, None, iterations=3)
+        eroded = cv2.erode(thresh, None, iterations=3)
+        #morphological opening (removes small objects from the foreground)
+        eroded = cv2.erode(thresh, None, iterations=3)
+        dilated = cv2.dilate(thresh, None, iterations=3)
+        # find contours in threshold
+        contours, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+
+        # for loop to detect contour changes during the video capture
+        for contour in contours:
+
+            # if object is detected the motion variable is set to one and the frame counter is reseted to 0
+            if cv2.contourArea(contour) > 1000:
+                motion = 1
+                frame_counter = 0
+
+            # wait a view frames to ensure that the dart is stuck in the board then make a screenshot        
+            if motion == 1 and frame_counter > 10 :
+                motion = 0
+                frame_counter = 0
+                cap.release()             
+                
+                #ToDo: andere 2 Bilder machen
+                cap2 = cv2.VideoCapture(1)
+                frame2 = cap2.read()
+                cap2.release()
+                cap3 = cv2.VideoCapture(2)
+                frame3 = cap3.read()
+                cap3.release()               
+
+                return frame1, frame2, frame3
+
+        frame_counter += 1
+        frame1 = frame2
+        ret, frame2 = cap.read()
+
+        # if (0xFF == ord('q')): # Abbruch, wenn q gedrückt
+        #     return False
