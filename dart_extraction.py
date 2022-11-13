@@ -1,32 +1,40 @@
 import cv2
 import const
+import numpy 
 
+img_counter = 0
 
 def get_dart_coordinates(im0, im1):
-    
+    global img_counter
     #compute difference between images
-    dif01 = cv2.subtract(im0, im1)
+    # dif01 = cv2.subtract(im0, im1)
 
-    # color the mask white
-    Conv_hsv_Gray = cv2.cvtColor(dif01, cv2.COLOR_BGR2GRAY)
-    ret, mask = cv2.threshold(Conv_hsv_Gray, 50, 255,cv2.THRESH_BINARY_INV |cv2.THRESH_OTSU)
-    dif01[mask != 255] = [255, 255, 255]
+    dif01 = cv2.absdiff(im0, im1)
+    mask = cv2.cvtColor(dif01, cv2.COLOR_BGR2GRAY)
 
-    # ToDo: parameter bisschen anpassen, um Pfeil besser zu erkennen
+    th = 55
+    imask =  mask>th
+
+    dif01 = numpy.zeros_like(im1, numpy.uint8)
+    dif01[imask] = im1[imask]
+    
+    direction = "C:/Users/timis/OneDrive/Desktop/DartsTracker/Dart_Screenshots/"
+    cv2.imwrite(direction+"{}_board.png".format(img_counter),im0)
+    cv2.imwrite(direction+"{}_dart.png".format(img_counter),im1)
+    cv2.imwrite(direction+"{}_dif.png".format(img_counter),dif01)
+
     blur = cv2.medianBlur(dif01,5) #blur image to erase thin lines
     gray = cv2.cvtColor(blur, cv2.COLOR_BGR2GRAY) # grayscale
 
     corners = cv2.goodFeaturesToTrack(gray, 500, 0.05, 1) # track corners
     import numpy as np
     corners = np.int0(corners)
-
-    # anzC = len(corners) # ToDo: evtl für späteres feature? (+ Seitenverhältnis/kleinstes Dreieck?) --> schaun obs n dartpfeil ist
         
     lowest_point = corners[0] # to find lowest corner --> tip of the dart
 
     for corner in corners:
         x, y = corner.ravel()
-    #     cv2.circle(im1, (x, y), 3, (255, 0, 0), -1) #draw every corner found white
+        cv2.circle(im1, (x, y), 3, (255, 0, 0), -1) #draw every corner found white
         
         # find lowest point:
         x_low, y_low = lowest_point.ravel()
@@ -37,7 +45,10 @@ def get_dart_coordinates(im0, im1):
     #print(lowest_point)
     x_low, y_low = lowest_point.ravel()
     cv2.circle(im1, (x_low, y_low), 4, (0, 0, 255), 2) # circle lowest corner red
-
+    
+    
+    cv2.imwrite(direction+"{}_tip.png".format(img_counter),im1)
+    img_counter += 1
     # cv2.imshow("shapes", im1)
     # cv2.waitKey(0)
     # cv2.destroyAllWindows()
@@ -70,20 +81,27 @@ def get_dart_score(p):
     # distanz mit 3Satz auf echte Maße skalieren
     dartboard_lenth = 340
     scaled_dist = dist /const.crop_size * dartboard_lenth 
-    print("scaled distance from dart to bullseye:")
-    print(scaled_dist)
+    # print("scaled distance from dart to bullseye:")
+    # print(scaled_dist)
     
     p_shiftet = (p[0] - bullseye_coord[0], p[1] - bullseye_coord[1])
 
     ang = np.arctan2(*p_shiftet[::-1])
+    # print("angle (rad):")
+    # print(ang)
     angle_clockwise = np.rad2deg((ang) % (2 * np.pi)) + 90 # oben zwischen 20|1 ist 0 Grad
     
-    print("angle clockwise:")
-    print(angle_clockwise)
+    # print("angle clockwise:")
+    # print(angle_clockwise)
+    
+    if(angle_clockwise >= 360): # ToDo: warum über 360° möglich?!
+        angle_clockwise -= 360
     
     field_degrees = 360 / 20 # = 18°
     field_number = int(angle_clockwise/field_degrees)
-    #print(field_number)
+
+    
+    print("field_number: "+ str(field_number))
     
     # map the score to the fields clockwise, beginning on top
     # 1 – 18 – 4 − 13 – 6 – 10 – 15 – 2 – 17 – 3 – 19 – 7 – 16 – 8 – 11 – 14 – 9 – 12 – 5 - 20
@@ -108,7 +126,7 @@ def get_dart_score(p):
             18 : 5,
             19 : 20 }
         
-    score = dict[field_number]    
+    score_raw = dict[field_number]    
     
     field_type = field_types.MISS
     
@@ -120,16 +138,16 @@ def get_dart_score(p):
         score = 25
         field_type = field_types.SINGLE
     elif(scaled_dist <= 99):
-        score = score
+        score = score_raw
         field_type = field_types.SINGLE
     elif(scaled_dist <= 107):
-        score = score * 3
+        score = score_raw * 3
         field_type = field_types.TRIPLE
     elif(scaled_dist <= 332):
-        score = score    
+        score = score_raw    
         field_type = field_types.SINGLE
     elif(scaled_dist <= 340):
-        score = score * 2    
+        score = score_raw * 2    
         field_type = field_types.DOUBLE
     else:
         score = 0
@@ -139,42 +157,32 @@ def get_dart_score(p):
     print("field type: ")
     print(field_type.name)
 
-    return(score)
+    return score, field_type, score_raw
     
 
-def detect_dart():
-    
-    #Video einlesen, hier müssen nun die verschiedenen USB-Kameras eingelesen werden
-    # ToDo: Kamera überprüfen
-    cap = cv2.VideoCapture(0)
+def detect_dart(cap1, cap2, cap3):
 
     # evaluate frame by frame
-    ret, frame1 = cap.read()
-    ret, frame2 = cap.read()
+    ret, frame1 = cap1.read()
+    ret, frame2 = cap1.read()
     motion = 0 # variable to ensure that a motion is detected
     frame_counter = 0 # variable to ensure that the dart is stuck in the board
-
-    while cap.isOpened():
+    print("ready for throw!")
+    while cap1.isOpened():
 
         # change the original frame into a threshold frame
         diff = cv2.absdiff(frame1, frame2)
         gray = cv2.cvtColor(diff, cv2.COLOR_BGR2GRAY)
         blur = cv2.GaussianBlur(gray, (5,5), 0)
         _, thresh = cv2.threshold(blur, 20, 255, cv2.THRESH_BINARY)
-        # morphological closing (removes small holes from the foreground)
-        dilated = cv2.dilate(thresh, None, iterations=3)
-        eroded = cv2.erode(thresh, None, iterations=3)
-        #morphological opening (removes small objects from the foreground)
-        eroded = cv2.erode(thresh, None, iterations=3)
-        dilated = cv2.dilate(thresh, None, iterations=3)
-        # find contours in threshold
+
         contours, _ = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 
         # for loop to detect contour changes during the video capture
         for contour in contours:
 
             # if object is detected the motion variable is set to one and the frame counter is reseted to 0
-            if cv2.contourArea(contour) > 1000:
+            if cv2.contourArea(contour) > 700:
                 motion = 1
                 frame_counter = 0
 
@@ -182,21 +190,16 @@ def detect_dart():
             if motion == 1 and frame_counter > 10 :
                 motion = 0
                 frame_counter = 0
-                cap.release()             
                 
-                #ToDo: andere 2 Bilder machen
-                cap2 = cv2.VideoCapture(1)
-                frame2 = cap2.read()
-                cap2.release()
-                cap3 = cv2.VideoCapture(2)
-                frame3 = cap3.read()
-                cap3.release()               
+                #andere 2 Bilder machen
+                ret, frame_c2 = cap2.read()
+                ret, frame_c3 = cap3.read()
+                print("Pfeil erkannt")
+                return frame1, frame_c2, frame_c3
 
-                return frame1, frame2, frame3
-
-        frame_counter += 1
+        frame_counter += 10
         frame1 = frame2
-        ret, frame2 = cap.read()
+        ret, frame2 = cap1.read()
 
         # if (0xFF == ord('q')): # Abbruch, wenn q gedrückt
         #     return False

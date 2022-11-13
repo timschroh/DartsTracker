@@ -1,40 +1,32 @@
 from time import sleep
 import const
-from board_extraction import transform_point, deserialize_calib, serialize_calib, calib_camera, calib, transformation_matrices
+import numpy 
+from board_extraction import transform_point, deserialize_calib, serialize_calib, calib
 from dart_extraction import get_dart_coordinates, get_dart_score, detect_dart
 import cv2
-import numpy as np
 import os
-
-from PyQt5.QtCore import QObject, QThread, pyqtSignal, Qt
+from PyQt5.QtCore import QThread, Qt
+from PyQt5 import QtCore, QtGui, QtWidgets
 
 aktiver_spieler = 0
 Punktzahl = 501
 Spieler_Punktzahl = [Punktzahl, Punktzahl]
 Spieler_counter = 0 # spieler 1 = 0, Spieler 2 = 1
 dart_counter = 0
-
+transformation_matrices = []
 ergebnis = 0
 
 last_scores = [0,0,0],[0,0,0]
 
 DartThread_active = False
 
-def img_read_resize(path):
-    img = cv2.imread(path)
-    img = img_resize(img)
-    return img
+cap1 = cv2.VideoCapture(1)#oben
+cap2 = cv2.VideoCapture(2)#rechts
+cap3 = cv2.VideoCapture(3)#links
 
 def img_resize(img):
     img = cv2.resize(img, (const.length, const.width))
     return img
-
-
-counter = 0
-
-# from curses import color_content
-from re import A
-from PyQt5 import QtCore, QtGui, QtWidgets
 
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
@@ -340,14 +332,17 @@ class Ui_MainWindow(object):
         
         self.resetAllScores()
         
+        
+        global transformation_matrices
         if (os.path.exists(const.path_calib)):
-                deserialize_calib()
+                transformation_matrices = deserialize_calib()
+
         else: 
-        #     calib()
-                img_board = img_read_resize(const.path_board) 
-                while(True):
-                        if(calib_camera(img_board, 0) == 'no'):
-                                break                
+                ret, board_img_1 = cap1.read()
+                ret, board_img_2 = cap2.read()
+                ret, board_img_3 = cap3.read()
+                calib(board_img_1, board_img_2, board_img_3)
+             
                 serialize_calib()
         
 
@@ -357,26 +352,31 @@ class Ui_MainWindow(object):
         global DartThread_active
         
         self.kalibrierungs_button.setEnabled(False)
-        self.neuesSpiel_button.setEnabled(False)
+        self.neuesSpiel_button.setEnabled(False)  
         
         self.dart_thread = dart_thread()
         self.dart_thread.start()
+        
+        red = QtWidgets.QGraphicsColorizeEffect()
+        red.setColor(Qt.red)
+        self.score1_label.setGraphicsEffect(red) 
         while (True):
                 red = QtWidgets.QGraphicsColorizeEffect()
                 red.setColor(Qt.red)
                 black = QtWidgets.QGraphicsColorizeEffect()
                 black.setColor(Qt.black)
+                
                 if(DartThread_active == True):
                         continue          
 
                 if(dart_counter == 0):
                         self.score1_label.setGraphicsEffect(red)                        
                         continue                        
-                elif(dart_counter == 1):
+                elif(dart_counter == 1):                     
                         self.score1_label.setGraphicsEffect(black)                        
                         self.score2_label.setGraphicsEffect(red)                        
                         self.score1_label.setText(str(ergebnis))
-                        QtWidgets.QApplication.processEvents()
+                        QtWidgets.QApplication.processEvents()                       
                         self.dart_thread.start()
                 elif(dart_counter == 2):
                         self.score2_label.setGraphicsEffect(black)                        
@@ -394,6 +394,7 @@ class Ui_MainWindow(object):
         self.neuesSpiel_button.setDisabled(False)
 
 
+
     def nextPlayer_callback(self, *args):
         global aktiver_spieler
         global Spieler_counter
@@ -407,7 +408,7 @@ class Ui_MainWindow(object):
                 Spieler_Punktzahl[aktiver_spieler] = scoreDif
         elif(scoreDif == 0): # sieg?
                 Spieler_Punktzahl[aktiver_spieler] = 0
-                # ToDo: double out checken
+                # ToDo: double out checken (Erweiterung)
                 self.nextPlayer_button.setEnabled(False)
         else: # überworfen
                 Spieler_Punktzahl[aktiver_spieler] = Spieler_Punktzahl[aktiver_spieler]
@@ -463,15 +464,14 @@ class Ui_MainWindow(object):
         self.score3_label.setText("0")
         
     def calib_callback(self, *args):
-        # todo calib() 
-        img_board = img_read_resize(const.path_board) 
-        while(True):
-                if(calib_camera(img_board, 0) == 'no'):
-                        break                
+        ret, board_img_1 = cap1.read()
+        ret, board_img_2 = cap2.read()
+        ret, board_img_3 = cap3.read()
+        calib(board_img_1, board_img_2, board_img_3) 
+        
         serialize_calib()
 
     def newGame_callback(self, *args):
-        #ToDo: iwas stimmt nicht
         # Spieler 1 ist dran
         self.nextPlayer_button.setDisabled(False) 
         self.resetAllScores()
@@ -561,71 +561,78 @@ class dart_thread(QThread):
         def run(self):
                 global dart_counter
                 global ergebnis
-                global counter
                 self.ThreadActive = True
                 
                 global DartThread_active
                 DartThread_active = True
+                
+                global cap1, cap2, cap3, transformation_matrices
 
-                
-                ## Alternative mit Bildern zum Testen der Oberfläche                
-                # board_cam_0 = img_read_resize(const.path_board) 
-                # dart_cam_0 = img_read_resize(const.path_dart)                                 
-                # last_dart_cam_0 = board_cam_0
-                # dart_coordinates_cam_0 = get_dart_coordinates(last_dart_cam_0, dart_cam_0)
-                # dart_coordinates_transformed_cam_0 = transform_point(dart_coordinates_cam_0, transformation_matrices[0], board_cam_0)
-                # score_cam_0 = get_dart_score(dart_coordinates_transformed_cam_0)
-                # dart_counter = dart_counter+1        
-                # #counter = counter+1    
-                # print("ergebnis: "+ str(get_dart_score(dart_coordinates_transformed_cam_0)))
-                # ergebnis = score_cam_0   
-                # DartThread_active = False     
-                # Bilder vor Würfen aufnehmen
-                
-                
-                
-                # ToDo: Hier eigentliche Auswertung einfügen:
-                cap1 = cv2.VideoCapture(0)
-                board_cam_0 = cap1.read()
+                print("-----Board Bilder machen")
+                ret, board_cam_0 = cap1.read()
+                ret, board_cam_1 = cap2.read()
+                ret, board_cam_2 = cap3.read()
+                                
                 board_cam_0 = img_resize(board_cam_0)
-                cap1.release()
-                cap2 = cv2.VideoCapture(1)
-                board_cam_1 = cap2.read()
                 board_cam_1 = img_resize(board_cam_1)
-                cap2.release()
-                cap3 = cv2.VideoCapture(2)
-                board_cam_2 = cap3.read()
-                board_cam_1 = img_resize(board_cam_1)
+                board_cam_2 = img_resize(board_cam_2)           
+
                 
                 # Darts detektieren und Bilder aufnehmen
-                # Sammys Bilder Methode --> gibt das Bild von allen drei Kameras, sobald neuer Pfeil in Scheibe steckt (wenn kein unterschiedsbild mehr drin ist)
-
-                cap3.release()
-                dart_cam_0, dart_cam_1, dart_cam_2 =  detect_dart()
+                # gibt das Bild von allen drei Kameras, sobald neuer Pfeil in Scheibe steckt (wenn kein unterschiedsbild mehr drin ist)
+                print("-----Detect Dart Methode starten")
+                dart_cam_0, dart_cam_1, dart_cam_2 =  detect_dart(cap1, cap2, cap3)
+                
                 dart_cam_0 = img_resize(dart_cam_0)
                 dart_cam_1 = img_resize(dart_cam_1)
-                dart_cam_2 = img_resize(dart_cam_2)                
-                
+                dart_cam_2 = img_resize(dart_cam_2)       
 
+                print("-----Bilder auswerten")
                 
                 ## Koordinaten aus 2 unterschiedsbildern bestimmen
                 dart_coordinates_cam_0 = get_dart_coordinates(board_cam_0, dart_cam_0)
                 dart_coordinates_cam_1 = get_dart_coordinates(board_cam_1, dart_cam_1)
                 dart_coordinates_cam_2 = get_dart_coordinates(board_cam_2, dart_cam_2)
-    
+
+                # print(transformation_matrices)
                 ## Koordinaten transformieren
                 dart_coordinates_transformed_cam_0 = transform_point(dart_coordinates_cam_0, transformation_matrices[0], board_cam_0)
                 dart_coordinates_transformed_cam_1 = transform_point(dart_coordinates_cam_1, transformation_matrices[1], board_cam_1)
                 dart_coordinates_transformed_cam_2 = transform_point(dart_coordinates_cam_2, transformation_matrices[2], board_cam_2)
 
                 ## Score aus transformierten Koordinaten bestimmen
-                score_cam_0 = get_dart_score(dart_coordinates_transformed_cam_0)
-                print("score_cam_0: " + str(ergebnis = score_cam_0))
-                score_cam_1 = get_dart_score(dart_coordinates_transformed_cam_1)
-                print("score_cam_1: " + str(ergebnis = score_cam_1))
-                score_cam_2 = get_dart_score(dart_coordinates_transformed_cam_2)
-                print("score_cam_2: " + str(ergebnis = score_cam_2))
+                score_cam_0, field_type, score_raw_cam_0 = get_dart_score(dart_coordinates_transformed_cam_0)
+                print("score_cam_0: " + str(score_cam_0))
+                score_cam_1, field_type, score_raw_cam_1 = get_dart_score(dart_coordinates_transformed_cam_1)
+                print("score_cam_1: " + str(score_cam_1))
+                score_cam_2, field_type, score_raw_cam_2 = get_dart_score(dart_coordinates_transformed_cam_2)
+                print("score_cam_2: " + str(score_cam_2))
     
+    
+                # Welche Kamera ist für was verantwortlich
+                # 0 - links
+                # 1 - rechts
+                # 2 - oben
+                cam_score_dict = {1 : 2,
+                        2 : 1,
+                        3 : 1,
+                        4 : 2,
+                        5 : 2,
+                        6 : 1,
+                        7 : 0,
+                        8 : 0,
+                        9 : 2,
+                        10 : 1,
+                        11 : 0,
+                        12 : 2,
+                        13 : 1,
+                        14 : 0,
+                        15 : 1,
+                        16 : 0,
+                        17 : 1,
+                        18 : 2,
+                        19 : 0,
+                        20 : 2}
                 ## Auswertung der 3 scores:
                 # --> wenn mind. 2 gleich sind, wird der score genommen                
                 if(score_cam_0 == score_cam_1):
@@ -636,19 +643,18 @@ class dart_thread(QThread):
                         ergebnis = score_cam_1
                         
                 # --> wenn alle unterschiedlich, wird die näheste Kamera genommen                
-                else: # ToDo: Scoreauswertung gewichten? Je nach Kamera position
-                        ergebnis = score_cam_0 # einfach mal zum Testen die erste Kamera nehmen
+                else: #  Scoreauswertung gewichten: Je nach Kamera position
+                        if(cam_score_dict[score_raw_cam_0] == 0): 
+                                ergebnis = score_cam_0 
+                        elif(cam_score_dict[score_raw_cam_1] == 1):
+                                ergebnis = score_cam_1
+                        else:
+                                ergebnis = score_cam_2
 
                 
                 dart_counter = dart_counter+1        
-                #counter = counter+1        
-                DartThread_active = False       
-                        
-        # def stop(self):
-        #         global DartThread_active
-        #         DartThread_active = False
-        #         self.ThreadActive = False
-        #         self.quit()
+                DartThread_active = False                
+                
 
 if __name__ == "__main__":
     import sys

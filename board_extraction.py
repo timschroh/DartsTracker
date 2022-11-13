@@ -18,32 +18,31 @@ def serialize_calib():
     # alte calib löschen
     if (os.path.exists(const.path_calib)):
         os.remove(const.path_calib)
-    fd = os.open( const.path_calib, os.O_RDWR|os.O_CREAT )
-
+    fd = os.open(const.path_calib, os.O_RDWR|os.O_CREAT )
+    print("vorm Speichern:")
+    print(transformation_matrices)
     np.save(const.path_calib, transformation_matrices)
+    os.close(fd)
     return
 
 def deserialize_calib():
     global transformation_matrices
     transformation_matrices = np.load(const.path_calib)
-    # print(transformation_matrices)
+    print("nachm Laden:")
+    print(transformation_matrices)
     return transformation_matrices
 
 
-def calib():
-    # record 3 calib images
-    board_cam_0 = cv2.VideoCapture(0)
-    board_cam_1 = cv2.VideoCapture(1)
-    board_cam_2 = cv2.VideoCapture(2)
-    
+def calib(board_img_1, board_img_2, board_img_3):
+
     while(True):
-        if(calib_camera(board_cam_0, 0) == 'no'):
+        if(calib_camera(board_img_1, 1) == 'no'):
             break
     while(True):
-        if(calib_camera(board_cam_1, 1) == 'no'):
+        if(calib_camera(board_img_2, 2) == 'no'):
             break
     while(True):
-        if(calib_camera(board_cam_2, 2) == 'no'):
+        if(calib_camera(board_img_3, 3) == 'no'):
             break
 
     serialize_calib()
@@ -59,8 +58,6 @@ def onMouse(event, x, y, flags, param):
         y_pressed = y 
         global pressed 
         pressed = True
-    #    global img
-    #    img = cv2.circle(img, (x_pressed,y_pressed), radius=5, color=(0,0,255), thickness=1)
         cv2.destroyAllWindows()
 
 def click_point_calib(window_name, calib_img):    
@@ -72,9 +69,7 @@ def click_point_calib(window_name, calib_img):
         cv2.namedWindow(window_name)
         cv2.setMouseCallback(window_name, onMouse)
         if(pressed):
-            # break 
             print('x = %d, y = %d'%(x_pressed, y_pressed))   
-            # calib_img = cv2.circle(calib_img, (x_pressed,y_pressed), radius=5, color=(0,0,255), thickness=1)
             pressed = False
             cv2.destroyAllWindows()
             break
@@ -85,82 +80,87 @@ def img_read_resize(path):
     img = cv2.resize(img, (const.length, const.width))
     return img
 
-def calib_camera(img_board, cam_nr):    
+def calib_camera(img, cam_nr):    
     
-    #ToDo: cam2 & 3 Koordinaten rausfinden & eingeben
-
+    img_board = cv2.resize(img, (const.length, const.width))
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ calib 20/1 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    coord_20_1_cam1 = [304,94]
-    coord_20_1_cam2 = [200,200]
-    coord_20_1_cam3 = [300,300]
-    calib_img_20_1 = img_read_resize(const.path_board) 
-    if (cam_nr == 0):     
+    coord_20_1_cam1 = [241,100]
+    coord_20_1_cam2 = [733,144]
+    coord_20_1_cam3 = [394,377]
+    calib_img_20_1 = img_board
+    if (cam_nr == 1):     
         coord = coord_20_1_cam1
-    elif (cam_nr == 1):     
-        coord = coord_20_1_cam2
     elif (cam_nr == 2):     
+        coord = coord_20_1_cam2
+    elif (cam_nr == 3):     
         coord = coord_20_1_cam3
     
-    calib_img_20_1 = cv2.circle(calib_img_20_1, coord, radius=30, color=(0,255,0), thickness=3)
-    click_point_calib("Kalbrierung Kamer Nr. " + str(cam_nr+1) + ": Aeussersten Punkt der 20|1 Grenze anklicken", calib_img_20_1)
+    calib_img_20_1 = cv2.circle(calib_img_20_1, coord, radius=30, color=(255,0,0), thickness=3)
+    click_point_calib("Kalbrierung Kamer Nr. " + str(cam_nr) + ": Aeussersten Punkt der 20|1 Grenze anklicken", calib_img_20_1)
     point_20_1 = [x_pressed, y_pressed]
     
     print('Calib Point 20_1 coordinates: x = %d, y = %d'%(point_20_1[0], point_20_1[1])) 
     
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ calib 219/3 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    coord_19_3_cam1 = [828,318]
-    coord_19_3_cam2 = [200,200]
-    coord_19_3_cam3 = [300,300]
-    calib_img_19_3 = img_read_resize(const.path_board) 
+    coord_19_3_cam1 = [779,227]
+    coord_19_3_cam2 = [142,235]
+    coord_19_3_cam3 = [483,112]
+    calib_img_19_3  = img_board#= img_read_resize(const.path_board) 
 
-    if (cam_nr == 0):     
+    if (cam_nr == 1):     
         coord = coord_19_3_cam1
-    elif (cam_nr == 1):     
-        coord = coord_19_3_cam2
     elif (cam_nr == 2):     
+        coord = coord_19_3_cam2
+    elif (cam_nr == 3):     
         coord = coord_19_3_cam3
     
-    calib_img_19_3 = cv2.circle(calib_img_19_3, coord, radius=30, color=(0,255,0), thickness=3)
-    click_point_calib("Kalbrierung Kamer Nr. " + str(cam_nr+1) + ": Aeussersten Punkt der 19|3 Grenze anklicken", calib_img_19_3)
+    calib_img_20_1 = cv2.circle(calib_img_20_1, coord, radius=30, color=(0,255,0), thickness=3)
+    calib_img_19_3 = cv2.circle(calib_img_19_3, coord, radius=30, color=(255,0,0), thickness=3)
+    
+    click_point_calib("Kalbrierung Kamer Nr. " + str(cam_nr) + ": Aeussersten Punkt der 19|3 Grenze anklicken", calib_img_19_3)
     point_19_3 = [x_pressed, y_pressed]
     
     print('Calib Point 19_3 coordinates: x = %d, y = %d'%(point_19_3[0], point_19_3[1])) 
     
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ calib 11/14 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    coord_11_14_cam1 = [184,358]
-    coord_11_14_cam2 = [200,200]
-    coord_11_14_cam3 = [300,300]
-    calib_img_11_14 = img_read_resize(const.path_board) 
-    if (cam_nr == 0):     
+    coord_11_14_cam1 = [175,291]
+    coord_11_14_cam2 = [398,109]
+    coord_11_14_cam3 = [774,214]
+    calib_img_11_14 = img_board#img_read_resize(const.path_board) 
+    if (cam_nr == 1):     
         coord = coord_11_14_cam1
-    elif (cam_nr == 1):     
-        coord = coord_11_14_cam2
     elif (cam_nr == 2):     
+        coord = coord_11_14_cam2
+    elif (cam_nr == 3):     
         coord = coord_11_14_cam3
     
-    calib_img_11_14 = cv2.circle(calib_img_11_14, coord, radius=30, color=(0,255,0), thickness=3)
-    click_point_calib("Kalbrierung Kamer Nr. " + str(cam_nr+1) + ": Aeussersten Punkt der 11|14 Grenze anklicken", calib_img_11_14)
+    calib_img_19_3 = cv2.circle(calib_img_19_3, coord, radius=30, color=(0,255,0), thickness=3)
+    calib_img_11_14 = cv2.circle(calib_img_11_14, coord, radius=30, color=(255,0,0), thickness=3)
+    click_point_calib("Kalbrierung Kamer Nr. " + str(cam_nr) + ": Aeussersten Punkt der 11|14 Grenze anklicken", calib_img_11_14)
     point_11_14 = [x_pressed, y_pressed]
     
     print('Calib Point 11_14 coordinates: x = %d, y = %d'%(point_11_14[0], point_11_14[1])) 
     
     #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ calib 6/10 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-    coord_6_10_cam1 = [624,84]
-    coord_6_10_cam2 = [200,200]
-    coord_6_10_cam3 = [300,300]
-    calib_img_6_10 = img_read_resize(const.path_board) 
-    if (cam_nr == 0):     
+    coord_6_10_cam1 = [602,65]
+    coord_6_10_cam2 = [656,333]
+    coord_6_10_cam3 = [162,178]
+    calib_img_6_10  = img_board# = img_read_resize(const.path_board)  #?
+    if (cam_nr == 1):     
         coord = coord_6_10_cam1
-    elif (cam_nr == 1):     
-        coord = coord_6_10_cam2
     elif (cam_nr == 2):     
+        coord = coord_6_10_cam2
+    elif (cam_nr == 3):     
         coord = coord_6_10_cam3
     
-    calib_img_6_10 = cv2.circle(calib_img_6_10, coord, radius=30, color=(0,255,0), thickness=3)
-    click_point_calib("Kalbrierung Kamer Nr. " + str(cam_nr+1) + ": Aeussersten Punkt der 6|10 Grenze anklicken", calib_img_6_10)
+    calib_img_11_14 = cv2.circle(calib_img_11_14, coord, radius=30, color=(0,255,0), thickness=3)
+    calib_img_6_10 = cv2.circle(calib_img_6_10, coord, radius=30, color=(255,0,0), thickness=3)
+    click_point_calib("Kalbrierung Kamer Nr. " + str(cam_nr) + ": Aeussersten Punkt der 6|10 Grenze anklicken", calib_img_6_10)
     point_6_10 = [x_pressed, y_pressed]
     
     print('Calib Point 6_10 coordinates: x = %d, y = %d'%(point_6_10[0], point_6_10[1])) 
+
+    calib_img_6_10 = cv2.circle(calib_img_6_10, coord, radius=30, color=(0,255,0), thickness=3)
 
     
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ transformation ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -179,7 +179,7 @@ def calib_camera(img_board, cam_nr):
     M = cv2.getPerspectiveTransform(input_pts,output_pts) 
     
     # save transformation Matrix for serialization
-    transformation_matrices[cam_nr] = M
+    transformation_matrices[cam_nr-1] = M
 
     # Apply the perspective transformation to the image
     out = cv2.warpPerspective(img_board,M,(img_board.shape[1], img_board.shape[0]),flags=cv2.INTER_LINEAR)
@@ -206,7 +206,7 @@ def calib_camera(img_board, cam_nr):
     #return M 
 
 def transform_point(p, M, img):
-        
+    
     out = cv2.warpPerspective(img,M,(img.shape[1], img.shape[0]),flags=cv2.INTER_LINEAR)
 
     const.crop_size = 500
@@ -214,7 +214,7 @@ def transform_point(p, M, img):
 
     cv2.circle(out,(half,half), half, (0,0,255), 2)
     out = out[0:const.crop_size, 0:const.crop_size]
-
+    print(M)
     # Transformation through Matrix-Vector-multiplication
     px = (M[0][0]*p[0] + M[0][1]*p[1] + M[0][2]) / ((M[2][0]*p[0] + M[2][1]*p[1] + M[2][2]))
     py = (M[1][0]*p[0] + M[1][1]*p[1] + M[1][2]) / ((M[2][0]*p[0] + M[2][1]*p[1] + M[2][2]))
