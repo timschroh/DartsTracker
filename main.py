@@ -20,9 +20,9 @@ last_scores = [0,0,0],[0,0,0]
 
 DartThread_active = False
 
-cap1 = cv2.VideoCapture(1)#oben
-cap2 = cv2.VideoCapture(2)#rechts
-cap3 = cv2.VideoCapture(3)#links
+cap1 = cv2.VideoCapture(3)#links
+cap2 = cv2.VideoCapture(0)#rechts
+cap3 = cv2.VideoCapture(1)#oben 
 
 def img_resize(img):
     img = cv2.resize(img, (const.length, const.width))
@@ -589,68 +589,69 @@ class dart_thread(QThread):
 
                 print("-----Bilder auswerten")
                 
-                ## Koordinaten aus 2 unterschiedsbildern bestimmen
-                dart_coordinates_cam_0 = get_dart_coordinates(board_cam_0, dart_cam_0)
-                dart_coordinates_cam_1 = get_dart_coordinates(board_cam_1, dart_cam_1)
-                dart_coordinates_cam_2 = get_dart_coordinates(board_cam_2, dart_cam_2)
+                try:
+                        ## Koordinaten aus 2 unterschiedsbildern bestimmen
+                        dart_coordinates_cam_0 = get_dart_coordinates(board_cam_0, dart_cam_0)
+                        dart_coordinates_cam_1 = get_dart_coordinates(board_cam_1, dart_cam_1)
+                        dart_coordinates_cam_2 = get_dart_coordinates(board_cam_2, dart_cam_2)
 
-                # print(transformation_matrices)
-                ## Koordinaten transformieren
-                dart_coordinates_transformed_cam_0 = transform_point(dart_coordinates_cam_0, transformation_matrices[0], board_cam_0)
-                dart_coordinates_transformed_cam_1 = transform_point(dart_coordinates_cam_1, transformation_matrices[1], board_cam_1)
-                dart_coordinates_transformed_cam_2 = transform_point(dart_coordinates_cam_2, transformation_matrices[2], board_cam_2)
+                        ## Koordinaten transformieren
+                        dart_coordinates_transformed_cam_0 = transform_point(dart_coordinates_cam_0, transformation_matrices[0], board_cam_0)
+                        dart_coordinates_transformed_cam_1 = transform_point(dart_coordinates_cam_1, transformation_matrices[1], board_cam_1)
+                        dart_coordinates_transformed_cam_2 = transform_point(dart_coordinates_cam_2, transformation_matrices[2], board_cam_2)
 
-                ## Score aus transformierten Koordinaten bestimmen
-                score_cam_0, field_type, score_raw_cam_0 = get_dart_score(dart_coordinates_transformed_cam_0)
-                print("score_cam_0: " + str(score_cam_0))
-                score_cam_1, field_type, score_raw_cam_1 = get_dart_score(dart_coordinates_transformed_cam_1)
-                print("score_cam_1: " + str(score_cam_1))
-                score_cam_2, field_type, score_raw_cam_2 = get_dart_score(dart_coordinates_transformed_cam_2)
-                print("score_cam_2: " + str(score_cam_2))
-    
-    
-                # Welche Kamera ist für was verantwortlich
-                # 0 - links
-                # 1 - rechts
-                # 2 - oben
-                cam_score_dict = {1 : 2,
-                        2 : 1,
-                        3 : 1,
-                        4 : 2,
-                        5 : 2,
-                        6 : 1,
-                        7 : 0,
-                        8 : 0,
-                        9 : 2,
-                        10 : 1,
-                        11 : 0,
-                        12 : 2,
-                        13 : 1,
-                        14 : 0,
-                        15 : 1,
-                        16 : 0,
-                        17 : 1,
-                        18 : 2,
-                        19 : 0,
-                        20 : 2}
-                ## Auswertung der 3 scores:
-                # --> wenn mind. 2 gleich sind, wird der score genommen                
-                if(score_cam_0 == score_cam_1):
-                        ergebnis = score_cam_0
-                elif(score_cam_0 == score_cam_2):
-                        ergebnis = score_cam_0
-                elif(score_cam_1 == score_cam_2):
-                        ergebnis = score_cam_1
-                        
-                # --> wenn alle unterschiedlich, wird die näheste Kamera genommen                
-                else: #  Scoreauswertung gewichten: Je nach Kamera position
-                        if(cam_score_dict[score_raw_cam_0] == 0): 
-                                ergebnis = score_cam_0 
-                        elif(cam_score_dict[score_raw_cam_1] == 1):
+                        ## Score aus transformierten Koordinaten bestimmen
+                        score_cam_0, field_type, score_raw_cam_0 = get_dart_score(dart_coordinates_transformed_cam_0)
+                        print("score_cam_0: " + str(score_cam_0))
+                        score_cam_1, field_type, score_raw_cam_1 = get_dart_score(dart_coordinates_transformed_cam_1)
+                        print("score_cam_1: " + str(score_cam_1))
+                        score_cam_2, field_type, score_raw_cam_2 = get_dart_score(dart_coordinates_transformed_cam_2)
+                        print("score_cam_2: " + str(score_cam_2))
+        
+        
+                        # Welche Kamera ist für was verantwortlich
+                        # 0 - links
+                        # 1 - rechts
+                        # 2 - oben
+                        cam_score_dict = {1 : 2,
+                                2 : 1,
+                                3 : 1,
+                                4 : 2,
+                                5 : 2,
+                                6 : 1,
+                                7 : 0,
+                                8 : 0,
+                                9 : 2,
+                                10 : 1,
+                                11 : 0,
+                                12 : 2,
+                                13 : 1,
+                                14 : 0,
+                                15 : 1,
+                                16 : 0,
+                                17 : 1,
+                                18 : 2,
+                                19 : 0,
+                                20 : 2}
+                        ## Auswertung der 3 scores:
+                        # --> wenn mind. 2 gleich sind, wird der score genommen                
+                        if(score_cam_0 == score_cam_1):
+                                ergebnis = score_cam_0
+                        elif(score_cam_0 == score_cam_2):
+                                ergebnis = score_cam_0
+                        elif(score_cam_1 == score_cam_2):
                                 ergebnis = score_cam_1
-                        else:
-                                ergebnis = score_cam_2
-
+                                
+                        # --> wenn alle unterschiedlich, wird die näheste Kamera genommen                
+                        else: #  Scoreauswertung gewichten: Je nach Kamera position
+                                if(cam_score_dict[score_raw_cam_0] == 0): 
+                                        ergebnis = score_cam_0 
+                                elif(cam_score_dict[score_raw_cam_1] == 1):
+                                        ergebnis = score_cam_1
+                                else:
+                                        ergebnis = score_cam_2
+                except:
+                        ergebnis = 0
                 
                 dart_counter = dart_counter+1        
                 DartThread_active = False                

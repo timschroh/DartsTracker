@@ -6,9 +6,7 @@ img_counter = 0
 
 def get_dart_coordinates(im0, im1):
     global img_counter
-    #compute difference between images
-    # dif01 = cv2.subtract(im0, im1)
-
+    
     dif01 = cv2.absdiff(im0, im1)
     mask = cv2.cvtColor(dif01, cv2.COLOR_BGR2GRAY)
 
@@ -49,10 +47,6 @@ def get_dart_coordinates(im0, im1):
     
     cv2.imwrite(direction+"{}_tip.png".format(img_counter),im1)
     img_counter += 1
-    # cv2.imshow("shapes", im1)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()
-    
     
     point_of_darttip = (x_low, y_low)
     return point_of_darttip
@@ -76,13 +70,13 @@ def get_dart_score(p):
     dif_2 = p[1] - bullseye_coord[1]
     dist = math.sqrt(dif_1**2 + dif_2**2)
     # print("unscaled distance from dart to bullseye:")
-    # print(dist)
+    print(dist)
     
-    # distanz mit 3Satz auf echte Maße skalieren
+    # distanz mit 3Satz auf echte Maße skalieren:
     dartboard_lenth = 340
     scaled_dist = dist /const.crop_size * dartboard_lenth 
     # print("scaled distance from dart to bullseye:")
-    # print(scaled_dist)
+    print(scaled_dist)
     
     p_shiftet = (p[0] - bullseye_coord[0], p[1] - bullseye_coord[1])
 
@@ -94,7 +88,7 @@ def get_dart_score(p):
     # print("angle clockwise:")
     # print(angle_clockwise)
     
-    if(angle_clockwise >= 360): # ToDo: warum über 360° möglich?!
+    if(angle_clockwise >= 360):
         angle_clockwise -= 360
     
     field_degrees = 360 / 20 # = 18°
@@ -130,23 +124,23 @@ def get_dart_score(p):
     
     field_type = field_types.MISS
     
-    # get single/double/triple/... through the distance to the bullseye
-    if(scaled_dist <= 12.7):
+   
+    if(dist <= 10):
         score = 50
         field_type = field_types.DOUBLE
-    elif(scaled_dist <= 31.8):
+    elif(dist <= 25):
         score = 25
         field_type = field_types.SINGLE
-    elif(scaled_dist <= 99):
+    elif(dist <= 141):#200):
         score = score_raw
         field_type = field_types.SINGLE
-    elif(scaled_dist <= 107):
+    elif(dist <= 157):#220):
         score = score_raw * 3
         field_type = field_types.TRIPLE
-    elif(scaled_dist <= 332):
+    elif(dist <= 252):#320):
         score = score_raw    
         field_type = field_types.SINGLE
-    elif(scaled_dist <= 340):
+    elif(dist <= 275):
         score = score_raw * 2    
         field_type = field_types.DOUBLE
     else:
@@ -163,12 +157,12 @@ def get_dart_score(p):
 def detect_dart(cap1, cap2, cap3):
 
     # evaluate frame by frame
-    ret, frame1 = cap1.read()
-    ret, frame2 = cap1.read()
+    ret, frame1 = cap3.read()
+    ret, frame2 = cap3.read()
     motion = 0 # variable to ensure that a motion is detected
     frame_counter = 0 # variable to ensure that the dart is stuck in the board
     print("ready for throw!")
-    while cap1.isOpened():
+    while cap3.isOpened():
 
         # change the original frame into a threshold frame
         diff = cv2.absdiff(frame1, frame2)
@@ -182,7 +176,7 @@ def detect_dart(cap1, cap2, cap3):
         for contour in contours:
 
             # if object is detected the motion variable is set to one and the frame counter is reseted to 0
-            if cv2.contourArea(contour) > 700:
+            if cv2.contourArea(contour) > 500:
                 motion = 1
                 frame_counter = 0
 
@@ -193,13 +187,13 @@ def detect_dart(cap1, cap2, cap3):
                 
                 #andere 2 Bilder machen
                 ret, frame_c2 = cap2.read()
-                ret, frame_c3 = cap3.read()
+                ret, frame_c1 = cap1.read()
                 print("Pfeil erkannt")
-                return frame1, frame_c2, frame_c3
+                return frame_c1, frame_c2, frame1
 
         frame_counter += 10
         frame1 = frame2
-        ret, frame2 = cap1.read()
+        ret, frame2 = cap3.read()
 
         # if (0xFF == ord('q')): # Abbruch, wenn q gedrückt
         #     return False
